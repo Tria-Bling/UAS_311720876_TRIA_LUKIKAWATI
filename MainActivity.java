@@ -1,133 +1,153 @@
-    package com.example.muhammadalfiannovanto_311710549_uas;
-
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Bundle;
-import android.os.Handler;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ProgressBar;
+package com.agusibrahim.appkasir;
+import android.app.*;
+import android.os.*;
+import android.support.v7.app.*;
+import android.support.v4.widget.*;
+import android.support.v7.widget.*;
+import android.support.design.widget.*;
+import android.view.*;
+import android.support.v4.view.*;
 import android.widget.Toast;
+import android.content.res.*;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import com.agusibrahim.appkasir.Fragment.*;
+import com.agusibrahim.appkasir.Model.Produk;
+import java.util.*;
+import com.agusibrahim.appkasir.Adapter.*;
+import kr.co.namee.permissiongen.*;
+import android.*;
+import android.support.v7.app.AlertDialog;
+import android.content.*;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.HashMap;
-import java.util.Map;
-
-    public class MainActivity extends AppCompatActivity {
-
-        EditText username, email, password, confPassword;
-        Button login, register;
-        ProgressDialog progressDialog;
-
-        @Override
-        protected void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_main);
-            username = (EditText) findViewById(R.id.edit_usernameRegister);
-            email = (EditText) findViewById(R.id.edit_emailRegister);
-            password = (EditText) findViewById(R.id.edit_passwordRegister);
-            confPassword = (EditText) findViewById(R.id.edit_confPasswordRegister);
-            login = (Button) findViewById(R.id.loginRegister);
-            register = (Button) findViewById(R.id.registerRegister);
-            progressDialog = new ProgressDialog(MainActivity.this);
-
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle("PO.Murni Jaya Cibarusah");
-            }
-            login.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent loginIntent = new Intent(MainActivity.this, login.class);
-                    startActivity(loginIntent);
-                }
-            });
-
-            register.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    String sUsername = username.getText().toString();
-                    String sEmail = email.getText().toString();
-                    String sPassword = password.getText().toString();
-                    String sconfPassword = confPassword.getText().toString();
-
-
-
-                    if (sPassword.equals(sconfPassword) && !sPassword.equals("")) {
-                        CreateDataToServer(sUsername, sEmail, sPassword);
-                        Intent loginIntent = new Intent(MainActivity.this, login.class);
-                        startActivity(loginIntent);
-                    } else {
-                        Toast.makeText(getApplicationContext(), "gagal password tidak cocok", Toast.LENGTH_SHORT).show();
-                    }
-
-                }
-            });
-        }
-    public void CreateDataToServer(final String username, final String email, final String password) {
-        if (checkNetworkConnection()) {
-            progressDialog.show();
-            StringRequest stringRequest= new StringRequest(Request.Method.POST, Contract.SERVER_REGISTER,
-                    new Response.Listener<String>() {
-                        @Override
-                        public void onResponse(String response) {
-                            try {
-                                JSONObject jsonObject = new JSONObject(response);
-                                String resp = jsonObject.getString("server_response");
-                                if(resp.equals("[{\"status\":\"OK\"}]")){
-                                    Toast.makeText(getApplicationContext(), "Registrasi Berhasil", Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(getApplicationContext(), resp, Toast.LENGTH_SHORT).show();
-                                }
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-
-                }
-            }) {
-                @Override
-                protected Map<String, String> getParams() throws AuthFailureError {
-                   Map<String, String> params = new HashMap<>();
-                   params.put("username", username);
-                    params.put("email", email);
-                    params.put("password", password);
-                    return params;
-                }
-            };
-
-            VolleyConnection.getInstance(MainActivity.this).addToReuestQue(stringRequest);
-
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    progressDialog.cancel();
-                }
-            }, 2000);
-        } else {
-            Toast.makeText(getApplicationContext(), "Tidak Ada Koneksi Internet ", Toast.LENGTH_SHORT).show();
-        }
+public class MainActivity extends AppCompatActivity
+{
+	DrawerLayout mDrawer;
+	NavigationView nvDrawer;
+	ActionBarDrawerToggle drawerToggle;
+	Toolbar toolbar;
+	public static ProdukDataAdapter dataproduk;
+	public static BelanjaanDataAdapter dataBalanjaan;
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+		toolbar=(Toolbar) findViewById(R.id.mytoolbar);
+		setSupportActionBar(toolbar);
+		mDrawer=(DrawerLayout) findViewById(R.id.drawer_layout);
+		nvDrawer=(NavigationView) findViewById(R.id.naView);
+		setupDrawer(nvDrawer);
+		drawerToggle= setupDrawerToggle();
+		mDrawer.addDrawerListener(drawerToggle);
+		getSupportFragmentManager().beginTransaction().replace(R.id.konten, new belanjaFragment()).commit();
+		nvDrawer.getMenu().getItem(0).setChecked(true);
+		setTitle("Belanja");
+		reqPerms();
+		dataproduk=new ProdukDataAdapter(this, Produk.getInit(this));
+		dataBalanjaan=new BelanjaanDataAdapter(this);
     }
+	
+	private void reqPerms(){
+		PermissionGen.with(MainActivity.this)
+			.addRequestCode(100)
+			.permissions(
+			Manifest.permission.CAMERA,
+			Manifest.permission.READ_EXTERNAL_STORAGE,
+			Manifest.permission.WRITE_EXTERNAL_STORAGE)
+			.request();
+	}
+	private void setupDrawer(NavigationView nview){
+		nview.setNavigationItemSelectedListener(
+			new NavigationView.OnNavigationItemSelectedListener(){
+				public boolean onNavigationItemSelected(MenuItem menu){
+					Terpilih(menu);
+					return true;
+				}
+			});
+	}
+	private ActionBarDrawerToggle setupDrawerToggle(){
+		return new ActionBarDrawerToggle(this, mDrawer, toolbar, R.string.drawer_buka, R.string.drawer_tutup);
+	}
+	private void Terpilih(MenuItem menu){
+		Class fragclass;
+		Fragment frag = null;
+		switch(menu.getItemId()){
+			case R.id.frag1:
+				fragclass = belanjaFragment.class;
+				break;
+			case R.id.frag2:
+				fragclass=productFragment.class;
+				break;
+			default:
+				fragclass=belanjaFragment.class;
+		}
+		try{
+			frag=(Fragment) fragclass.newInstance();
+		}catch(Exception e){}
+		FragmentManager fm=getSupportFragmentManager();
+		fm.beginTransaction().replace(R.id.konten, frag).commit();
+		menu.setChecked(true);
+		setTitle(menu.getTitle());
+		mDrawer.closeDrawers();
+	}
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item)
+	{
+		// TODO: Implement this method
+		switch (item.getItemId()){
+			case android.R.id.home:
+				mDrawer.openDrawer(GravityCompat.START);
+				return true;
+			
+				
+		}
+		return super.onOptionsItemSelected(item);
+	}
 
-    public boolean checkNetworkConnection() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
-        return (networkInfo != null && networkInfo.isConnected());
-    }
+	@Override
+	protected void onPostCreate(Bundle savedInstanceState) {
+		super.onPostCreate(savedInstanceState);
+		// Sync the toggle state after onRestoreInstanceState has occurred.
+		drawerToggle.syncState();
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+		drawerToggle.onConfigurationChanged(newConfig);
+	}
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.mainmenu, menu);
+		return true;
+	}
+	@PermissionSuccess(requestCode = 100)
+	public void doSomething(){
+		// Lakukan sesuatu disini
+	}
+	@PermissionFail(requestCode = 100)
+	public void doFailSomething(){
+		AlertDialog.Builder dlg=new AlertDialog.Builder(this);
+		dlg.setTitle("Perijinan ditolak");
+		dlg.setCancelable(false);
+		dlg.setMessage("Untuk menggunakan Aplikasi ini kamu perlu membolehkan beberapa perijinan yang diajukan. Atau Aplikasi ini tidak bisa digunakan");
+		dlg.setNegativeButton("Keluar", new DialogInterface.OnClickListener(){
+				@Override
+				public void onClick(DialogInterface p1, int p2) {
+					MainActivity.this.finish();
+				}
+			});
+		dlg.show();
+	}
+	@Override public void onRequestPermissionsResult(int requestCode, String[] permissions,
+													 int[] grantResults) {
+		PermissionGen.onRequestPermissionsResult(this, requestCode, permissions, grantResults);
+	}
+	@Override
+	protected void onDestroy() {
+		
+		dataBalanjaan.total=0;
+		super.onDestroy();
+	}
+	
 }
